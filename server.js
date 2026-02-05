@@ -71,5 +71,5 @@ app.get('/api/admin/all', async (req, res) => {
 // 根目录，用来检测服务器活没活着
 app.get('/', (req, res) => res.send("Nexus Server Active"));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 7860;
 app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Listening on ${PORT}`));
