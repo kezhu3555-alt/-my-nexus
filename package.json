@@ -1,19 +1,18 @@
 {
-  "name": "student-manager",
-  "version": "1.0.0",
-  "description": "Nexus Gold Management System",
+  "name": "nexus-gold-os",
+  "version": "2.1.0",
+  "description": "Premium Full-Stack Life Management System",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "esbuild index.tsx --bundle --outfile=bundle.js --format=esm --jsx=automatic --loader:.tsx=tsx --loader:.ts=ts --external:react --external:react-dom"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.0.0",
-    "cors": "^2.8.5",
+    "mongoose": "^7.3.1",
     "jsonwebtoken": "^9.0.0",
-    "bcryptjs": "^2.4.3"
-  },
-  "engines": {
-    "node": ">=14.0.0"
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "esbuild": "^0.19.0"
   }
 }
