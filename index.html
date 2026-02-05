@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>NEXUS GOLD | 顶级云档案</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: #d4af37; font-family: sans-serif; }
+        .gold-gradient { background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728); -webkit-background-clip: text; color: transparent; }
+        .glass { background: rgba(15, 15, 15, 0.9); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 1.5rem; }
+        input, textarea { background: #111 !important; border: 1px solid #333 !important; color: #fff !important; padding: 0.8rem; border-radius: 0.5rem; width: 100%; }
+        #canvas { position: fixed; top:0; left:0; z-index:-1; }
+    </style>
+</head>
+<body class="p-4">
+    <canvas id="canvas"></canvas>
+
+    <!-- 登录模块 -->
+    <div id="auth-box" class="max-w-md mx-auto mt-20 glass p-10 text-center">
+        <h1 class="text-3xl font-bold gold-gradient mb-8 uppercase">Nexus Gold</h1>
+        <input id="phone" type="text" placeholder="手机号" class="mb-4">
+        <input id="pass" type="password" placeholder="密码" class="mb-6">
+        <div class="flex gap-4">
+            <button onclick="handleAuth('login')" class="flex-1 bg-[#d4af37] text-black font-bold py-3 rounded-lg">登录</button>
+            <button onclick="handleAuth('register')" class="flex-1 border border-[#d4af37] py-3 rounded-lg">注册</button>
+        </div>
+    </div>
+
+    <!-- 主界面 -->
+    <div id="main-box" class="hidden max-w-6xl mx-auto flex flex-col lg:flex-row gap-6 mt-10">
+        <!-- 个人资料编辑 -->
+        <div class="flex-1 glass p-8">
+            <h2 class="text-xl font-bold mb-6 gold-gradient">个人档案管理</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="p-name" placeholder="姓名">
+                <input id="p-job" placeholder="职位">
+                <input id="p-email" placeholder="邮箱">
+                <input id="p-wechat" placeholder="微信">
+                <textarea id="p-bio" placeholder="详细介绍..." class="md:col-span-2 h-32"></textarea>
+                <button onclick="save()" class="md:col-span-2 bg-[#d4af37] text-black font-bold py-3 rounded-lg mt-4">同步到云端</button>
+            </div>
+            <button onclick="logout()" class="mt-10 text-gray-500 text-sm underline text-center w-full">退出登录</button>
+        </div>
+
+        <!-- 管理员面板 (默认隐藏) -->
+        <div id="admin-panel" class="hidden w-full lg:w-96 glass p-6 overflow-y-auto max-h-[80vh]">
+            <h2 class="text-lg font-bold mb-4 text-red-500 flex items-center gap-2">
+                <span class="w-2 h-2 bg-red-500 rounded-full animate-ping"></span> 管理员上帝模式
+            </h2>
+            <div id="user-list" class="space-y-4 text-sm">
+                <!-- 用户列表 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 这里的地址非常关键！ ---
+        // 本地测试用 http://localhost:3000
+        // 部署后改为你的云端后端地址
+        const API = "http://localhost:3000/api"; 
+
+        async function handleAuth(type) {
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('pass').value;
+            const res = await fetch(`${API}/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({phone, password})
+            });
+            const data = await res.json();
+            if(data.error) return alert(data.error);
+            if(type === 'login') {
+                localStorage.setItem('nexus_token', data.token);
+                localStorage.setItem('nexus_role', data.role);
+                location.reload();
+            } else {
+                alert("注册成功，请登录");
+            }
+        }
+
+        async function init() {
+            const token = localStorage.getItem('nexus_token');
+            const role = localStorage.getItem('nexus_role');
+            if(!token) return;
+
+            document.getElementById('auth-box').classList.add('hidden');
+            document.getElementById('main-box').classList.remove('hidden');
+
+            // 加载个人信息
+            const res = await fetch(`${API}/me`, { headers: {'Authorization': token} });
+            const p = await res.json();
+            document.getElementById('p-name').value = p.name || '';
+            document.getElementById('p-job').value = p.job || '';
+            document.getElementById('p-email').value = p.email || '';
+            document.getElementById('p-wechat').value = p.wechat || '';
+            document.getElementById('p-bio').value = p.bio || '';
+
+            // 如果是管理员，加载所有人
+            if(role === 'admin') {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                const adminRes = await fetch(`${API}/admin/all`, { headers: {'Authorization': token} });
+                const users = await adminRes.json();
+                document.getElementById('user-list').innerHTML = users.map(u => `
+                    <div class="p-3 bg-white/5 rounded-lg border border-white/10">
+                        <div class="font-bold text-white">${u.profile.name} (${u.phone})</div>
+                        <div class="text-[10px] text-gray-500">${u.profile.job || '未填写职位'}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function save() {
+            const token = localStorage.getItem('nexus_token');
+            const body = {
+                name: document.getElementById('p-name').value,
+                job: document.getElementById('p-job').value,
+                email: document.getElementById('p-email').value,
+                wechat: document.getElementById('p-wechat').value,
+                bio: document.getElementById('p-bio').value
+            };
+            await fetch(`${API}/me`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json', 'Authorization': token},
+                body: JSON.stringify(body)
+            });
+            alert("同步成功");
+            location.reload();
+        }
+
+        function logout() { localStorage.clear(); location.reload(); }
+
+        // 粒子背景代码 (略，保持之前的 Canvas 逻辑即可)
+        // ... (这里的 Canvas 粒子代码同上一版本)
+        init();
+    </script>
+</body>
+</html>
